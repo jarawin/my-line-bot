@@ -3,7 +3,7 @@ services:
     name: my-line-bot
     runtime: bun
     buildCommand: bun install
-    startCommand: bun run index.ts
+    startCommand: bun run src/index.ts
     envVars:
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false

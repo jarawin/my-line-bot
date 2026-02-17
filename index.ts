@@ -44,7 +44,6 @@ function printLog(
     );
 }
 
-// --- ⚙️ CORE LOGIC ---
 
 // จำลองฟังก์ชันตอบกลับ LINE (Network Bound)
 async function replyMessage(replyToken: string, text: string): Promise<{ replyMs: number; replyOk: boolean }> {
@@ -68,16 +67,14 @@ async function replyMessage(replyToken: string, text: string): Promise<{ replyMs
 }
 
 // จำลองฟังก์ชันประมวลผลเดิมพัน (CPU Bound / In-Memory)
-// *ควรเป็น Synchronous หรือ Async ที่เร็วมากๆ*
 async function processEvent(event: any): Promise<{ procMs: number; resultText: string }> {
     const t0 = Date.now();
 
     // --- ใส่ Logic เดิมพันตรงนี้ ---
     // เช่น ตัดเงิน, เช็คยอด, บันทึกผล
+
     const userText = event.message.text;
     const resultText = `รับผล: ${userText}`;
-    // ---------------------------
-
     return { procMs: Date.now() - t0, resultText };
 }
 
@@ -93,7 +90,7 @@ export default {
 
         // 2. Webhook Handler
         if (req.method === "POST" && new URL(req.url).pathname === "/callback") {
-            const serverReceiveTime = Date.now(); // จับเวลาทันทีที่ถึง Server
+            const serverReceiveTime = Date.now();
             webhookCount++;
 
             try {
@@ -102,28 +99,17 @@ export default {
                 const eventSize = events.length;
 
                 if (eventSize === 0) return new Response("OK");
-
-                // 🔥 PARALLEL EXECUTION 🔥
-                // ใช้ .map เพื่อสร้าง Array of Promises แล้วรันพร้อมกันทันที
                 const tasks = events.map(async (event, index) => {
                     const eventIndex = index + 1;
 
-                    // 2.1 กรองเฉพาะ Text Message
                     if (event.type !== 'message' || event.message.type !== 'text') {
                         return;
                     }
 
-                    // 2.2 คำนวณ Latency ขาเข้า (User -> Server)
-                    // *หมายเหตุ: event.timestamp มาจาก LINE Server Japan
                     const transMs = serverReceiveTime - event.timestamp;
-
-                    // 2.3 Process Logic (ตัดเงิน/คำนวณ)
                     const { procMs, resultText } = await processEvent(event);
 
-                    // 2.4 Reply Back (ยิงออกไปเลย ไม่ต้องรอคนอื่นใน Loop)
                     const { replyMs, replyOk } = await replyMessage(event.replyToken, resultText);
-
-                    // 2.5 Log ผลลัพธ์ (ใครเสร็จก่อน Log ก่อน)
                     printLog(
                         webhookCount, eventIndex, eventSize,
                         event.message.text,
@@ -132,9 +118,7 @@ export default {
                     );
                 });
 
-                // รอให้ทุก Task ใน Webhook นี้จบ (หรือยิง Request ออกไปหมดแล้ว)
                 await Promise.all(tasks);
-
                 return new Response("OK");
 
             } catch (err) {
