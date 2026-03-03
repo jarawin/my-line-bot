@@ -1,16 +1,21 @@
 {
-  "name": "my-line-bot",
+  "name": "blue-bull-bot",
   "module": "src/index.ts",
   "type": "module",
   "private": true,
   "scripts": {
     "start": "bun run src/index.ts",
-    "dev": "bun --watch src/index.ts"
+    "dev": "bun --watch src/index.ts",
+    "webhook": "bun run scripts/setup-webhook.ts",
+    "reset": "bun run scripts/reset.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
   }
 }

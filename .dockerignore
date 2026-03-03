@@ -32,3 +32,21 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Local SQLite database files (managed by persistent volume in production)
+betting.sqlite
+betting.sqlite-shm
+betting.sqlite-wal
+
+# Local transient data (exports/backups generated at runtime)
+data/exports/
+data/backups/
+
+# Git and IDE metadata
+.git
+.claude
+.cursor
+
+# Prototype / scratch files
+index.ts
+file.json

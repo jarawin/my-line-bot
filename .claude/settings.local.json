@@ -5,7 +5,22 @@
       "Bash(ps:*)",
       "Bash(bun tsc:*)",
       "Bash(node --version:*)",
-      "Bash(npm:*)"
+      "Bash(npm:*)",
+      "Bash(bun run tsc:*)",
+      "Bash(bun build:*)",
+      "Bash(ls:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(timeout 3 bun run:*)",
+      "Bash(xargs kill:*)",
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(bun add:*)",
+      "Bash(bun --print:*)",
+      "Bash(bun -e:*)",
+      "Bash(bun run:*)",
+      "Bash(git -C /Users/jarawin/my-line-bot log --oneline -20)",
+      "Bash(wc -l /Users/jarawin/my-line-bot/src/**/*.ts)",
+      "Bash(du -sh /Users/jarawin/my-line-bot/betting.sqlite*)"
     ]
   }
 }

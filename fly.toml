@@ -8,16 +8,27 @@ primary_region = 'nrt'
 
 [build]
 
+# Path overrides: persistent volume at /app/data, static images at /app/static-images
+[env]
+  DB_PATH    = '/app/data/betting.sqlite'
+  EXPORT_DIR = '/app/data/exports'
+  BACKUP_DIR = '/app/data/backups'
+  IMAGE_DIR  = '/app/static-images'
+
 [http_service]
   internal_port = 3000
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ['app']
 
+# Persistent volume for SQLite, exports, and backups
+[[mounts]]
+  source      = 'bot_data'
+  destination = '/app/data'
+
 [[vm]]
-  memory = '1gb'
+  memory   = '512mb'
   cpu_kind = 'shared'
-  cpus = 1
-  memory_mb = 256
+  cpus     = 1

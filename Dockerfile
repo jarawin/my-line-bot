@@ -31,8 +31,15 @@ COPY . .
 # Final stage for app image
 FROM base
 
+# Install runtime utilities (zip needed for pre-reset data backup)
+RUN apt-get update -qq && apt-get install --no-install-recommends -y zip && rm -rf /var/lib/apt/lists/*
+
 # Copy built application
 COPY --from=build /app /app
+
+# Move bundled images out of /app/data so they are not shadowed
+# when the persistent volume is mounted at /app/data
+RUN mv /app/data/images /app/static-images
 
 # Start the server by default, this can be overwritten at runtime
 EXPOSE 3000
