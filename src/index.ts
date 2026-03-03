@@ -26,7 +26,7 @@ function gracefulShutdown(signal: string): void {
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default {
     port,
@@ -41,8 +41,8 @@ export default {
             const ext = filename.split('.').pop()?.toLowerCase();
             const mimeType =
                 ext === 'webp' ? 'image/webp' :
-                ext === 'png'  ? 'image/png'  :
-                                 'image/jpeg';
+                    ext === 'png' ? 'image/png' :
+                        'image/jpeg';
             const file = Bun.file(`${IMAGE_DIR}/${filename}`);
             if (!(await file.exists())) return new Response('Not Found', { status: 404 });
             return new Response(file, {
@@ -82,7 +82,7 @@ export default {
             });
         }
 
-        if (req.method === 'GET') return new Response('Bot Ready!');
+        if (req.method === 'GET') return new Response('Bot Ready Now!');
 
         if (req.method === 'POST' && url.pathname === '/line') {
             return handleLineWebhook(req);

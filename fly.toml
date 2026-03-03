@@ -8,6 +8,10 @@ primary_region = 'nrt'
 
 [build]
 
+# Single-machine deploy (SQLite is single-writer; HA would require 2 volumes)
+[deploy]
+  strategy = 'immediate'
+
 # Path overrides: persistent volume at /app/data, static images at /app/static-images
 [env]
   DB_PATH    = '/app/data/betting.sqlite'
