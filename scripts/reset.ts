@@ -15,6 +15,12 @@ import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 
+// Respect env overrides (set by fly.toml in production)
+const DB_PATH   = process.env.DB_PATH   || join(ROOT, 'betting.sqlite');
+const EXPORT_DIR = process.env.EXPORT_DIR || join(ROOT, 'data/exports');
+const BACKUP_DIR = process.env.BACKUP_DIR || join(ROOT, 'data/backups');
+const IMAGE_DIR  = process.env.IMAGE_DIR  || join(ROOT, 'data/images');
+
 function rm(path: string) {
     if (existsSync(path)) {
         rmSync(path, { force: true });
@@ -51,15 +57,15 @@ function clearGlob(dir: string, prefix: string, extensions: string[]) {
 console.log('\n🗑️  Resetting betting bot data...\n');
 
 // ── SQLite files ──────────────────────────────────────────────────────────────
-rm(join(ROOT, 'betting.sqlite'));
-rm(join(ROOT, 'betting.sqlite-shm'));
-rm(join(ROOT, 'betting.sqlite-wal'));
+rm(DB_PATH);
+rm(DB_PATH + '-shm');
+rm(DB_PATH + '-wal');
 
 // ── Exports & backups ─────────────────────────────────────────────────────────
-clearDir(join(ROOT, 'data/exports'));
-clearDir(join(ROOT, 'data/backups'));
+clearDir(EXPORT_DIR);
+clearDir(BACKUP_DIR);
 
 // ── Bank upload images (b*.jpg / b*.png / b*.jpeg / b*.webp) ─────────────────
-clearGlob(join(ROOT, 'data/images'), 'b', ['.jpg', '.jpeg', '.png', '.webp']);
+clearGlob(IMAGE_DIR, 'b', ['.jpg', '.jpeg', '.png', '.webp']);
 
 console.log('\n✅  Reset complete. Run `bun run start` to initialize a fresh DB.\n');
