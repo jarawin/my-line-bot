@@ -71,7 +71,7 @@ const stmtGetAllBetsForRound      = db.prepare(
      FROM bets WHERE round_id = ? ORDER BY created_at`
 );
 const stmtGetSettledBets          = db.prepare(
-    `SELECT user_id, side, amount, win_amount, loss_amount, status, odds_index
+    `SELECT user_id, side, amount, win_amount, loss_amount, status, odds_index, created_at
      FROM bets WHERE round_id = ? AND status IN ('WON', 'LOST', 'DRAW')`
 );
 const stmtGetOddsForRound         = db.prepare(
@@ -282,7 +282,7 @@ export function getRoundForReversal(roundId?: number): RoundRow | null {
     return stmtGetLastCompletedRound.get() as RoundRow ?? null;
 }
 
-type BetReverseRow = { user_id: string; side: string; amount: number; win_amount: number; loss_amount: number; status: string; odds_index: number };
+type BetReverseRow = { user_id: string; side: string; amount: number; win_amount: number; loss_amount: number; status: string; odds_index: number; created_at: number };
 
 export function getSettledBetsForRound(roundId: number): BetReverseRow[] {
     return stmtGetSettledBets.all(roundId) as BetReverseRow[];
@@ -420,7 +420,7 @@ export function loadSystemState(): { usersLoaded: number; roundLoaded: boolean }
         });
     }
 
-    const configRows = db.query(`SELECT key, value FROM system_config WHERE key IN ('admin_link', 'flex_compact', 'bet_compact', 'tx_compact', 'round_compact', 'ac_compact', 'sum_compact', 'xcap', 'def_maxbet', 'def_minbet', 'def_lim', 'def_vig', 'risk_threshold', 'bet_delay_ms')`).all() as { key: string; value: string }[];
+    const configRows = db.query(`SELECT key, value FROM system_config WHERE key IN ('admin_link', 'flex_compact', 'bet_compact', 'tx_compact', 'round_compact', 'ac_compact', 'sum_compact', 'mention_all', 'xcap', 'def_maxbet', 'def_minbet', 'def_lim', 'def_vig', 'risk_threshold', 'bet_delay_ms')`).all() as { key: string; value: string }[];
     for (const { key, value } of configRows) {
         if (key === 'admin_link')      SystemState.adminLink      = value;
         if (key === 'flex_compact')    SystemState.oddsCompact    = value === '1';
@@ -429,6 +429,7 @@ export function loadSystemState(): { usersLoaded: number; roundLoaded: boolean }
         if (key === 'round_compact')   SystemState.roundCompact   = value === '1';
         if (key === 'ac_compact')      SystemState.acCompact      = value === '1';
         if (key === 'sum_compact')     SystemState.sumCompact     = value === '1';
+        if (key === 'mention_all')     SystemState.mentionAll     = value !== '0';
         if (key === 'xcap')            SystemState.xcap           = parseInt(value, 10) || 0;
         if (key === 'def_maxbet')    { const v = parseInt(value, 10); if (v > 0) SystemState.defMaxBet = v; }
         if (key === 'def_minbet')    { const v = parseInt(value, 10); if (v > 0) SystemState.defMinBet = v; }

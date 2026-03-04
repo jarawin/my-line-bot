@@ -22,7 +22,12 @@
       "Bash(wc -l /Users/jarawin/my-line-bot/src/**/*.ts)",
       "Bash(du -sh /Users/jarawin/my-line-bot/betting.sqlite*)",
       "Bash(fly machines destroy 3d8d114f5ed998 --force)",
-      "Bash(fly machines destroy 18500eb42494d8 --force)"
+      "Bash(fly machines destroy 18500eb42494d8 --force)",
+      "WebFetch(domain:fly.io)",
+      "Bash(grep -l \"from.*flex\\\\|from.*utils\\\\|from.*commands\\\\|from.*platform\" /Users/jarawin/my-line-bot/src/**/*.ts)",
+      "Bash(grep -l \"export\" /Users/jarawin/my-line-bot/src/platform/*.ts)",
+      "Read(//Users/jarawin/my-line-bot/**)",
+      "Bash(done)"
     ]
   }
 }

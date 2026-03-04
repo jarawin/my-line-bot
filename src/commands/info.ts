@@ -107,47 +107,65 @@ export function cmdBettingBoard(): CommandResult {
 export function cmdHelp(): CommandResult {
     const helpText = `📖 คำสั่งแอดมิน
 
-🎮 รอบ [กลุ่มเดิมพัน]
-o - เปิดรอบใหม่
-x / xx - ปิดรอบ / เปิดรอบต่อ
-sด / sง / sส - ตั้งผล แดง/น้ำเงิน/เสมอ
-y - ยืนยันจ่ายเงิน
-r / r12 - ย้อนกลับรอบ
+🎮 รอบ  [BETTING]
+o — เปิดรอบใหม่
+x — ปิดรอบ  (ถ้าราคายังเปิดอยู่ จะปิดราคาก่อน)
+xx — เปิดรอบต่อ (ยกเลิกการปิด)
+sด / sง / sส — ตั้งผล แดง / น้ำเงิน / เสมอ
+y — ยืนยันจ่ายเงิน
+r / r12 — ย้อนกลับรอบล่าสุด / รอบที่ 12
 
-💰 ราคา [กลุ่มเดิมพัน]
-ด/10/2 หรือ ง/4/10 - เปิดราคา
-ป - ปิดราคาปัจจุบัน
-ยก / ยก2 - ยกเลิกราคา
-ยกยก - คืนราคาที่ยกล่าสุด
+💰 ราคา  [BETTING]
+ด/10/2 หรือ ง/4/10 — เปิดราคา
+ป — ปิดราคา
+ยก / ยก2 — ยกเลิกราคาล่าสุด / ราคา #2
+ยกยก / ยกยก2 — คืนราคาที่ยกล่าสุด / ราคา #2
 
-📊 ดูข้อมูล [หลังบ้าน]
-#r / #r12 - ดูรอบ  |  #o / #o2 - ดูราคา
-b - กระดานแทง  |  u - รายชื่อ user
-a - รายชื่อแอดมิน  |  stats - สถิติรวม
-ac - Active credit  |  sum - สรุปเดิมพัน
+📊 ข้อมูล  [BACKOFFICE]
+b — กระดานแทง
+u — รายชื่อ user ทั้งหมด
+a — รายชื่อแอดมิน
+stats — สถิติรวม
+#r / #r12 — ดูรอบปัจจุบัน / รอบที่ 12
+#o / #o2 / #o2r3 — ดูราคาล่าสุด / #o2 / #o2 ของรอบ 3
+tx — ประวัติธุรกรรม
+ac — ยอดเครดิต Active
+sum — สรุปผลแพ้ชนะ
 
-👤 จัดการ User [หลังบ้าน]
-#u12 - ดูข้อมูล user
-#u12+500 / -500 / =500 - จัดการเครดิต
-admin / customer / master #u12 - ตั้ง role
-c #u12 / c12 #u12 - ดูเครดิต user อื่น
+📤 Export  [BACKOFFICE]
+extx — ธุรกรรม
+exac — ยอด Active credit
+exab — ตารางเดิมพัน
+exsum — สรุปแพ้ชนะ
 
-🏦 บัญชีธนาคาร [หลังบ้าน]
-บช - ดูบัญชีทั้งหมด  |  #b0 - วิธีเพิ่มบัญชี
-#b1 / #b1=active/delete/image - ดู/จัดการบัญชี
+👤 User  [BACKOFFICE / ทุกกลุ่ม]
+#u12 — ดูข้อมูล user
+#u12+500 / -500 / =500 — ฝาก / ถอน / ปรับยอด
+admin #u12 / customer #u12 / master #u12 — ตั้ง role
+c — เครดิตตัวเอง  |  cc — รวมประวัติเดิมพัน
+c #u12 / cc #u12 — เครดิต / full ของ user อื่น
+c12 — เครดิตรอบที่ 12  |  c12 #u12 — ของ user อื่น
 
-⚙️ ตั้งค่า [หลังบ้าน]
-st - Settings  |  cp - Compact mode
+🏦 ธนาคาร  [BACKOFFICE]
+#b0 — วิธีเพิ่มบัญชี
+#b1 — ดูบัญชี #1
+#b1=active / delete / image — จัดการบัญชี
+บช — รายการบัญชีทั้งหมด
+al=https://... — ตั้ง Admin Link
+
+⚙️ ตั้งค่า  [BACKOFFICE]
+st — Settings panel  |  cp — Compact mode panel
+all — สถานะ Tag @everyone
+all=1 / all=0 — เปิด / ปิด Tag @everyone
 xcap / maxbet / minbet / lim / vig / risk / delay
-  → พิมชื่อดูค่า  หรือ ชื่อ=ค่า เพื่อตั้ง
-al=https://... - ตั้ง Admin Link
+  → พิมชื่อ = ดูค่า  |  ชื่อ=ค่า = ตั้งค่า
 
-📤 Export [หลังบ้าน]
-tx / extx - ประวัติธุรกรรม / export
-exac / exab / exsum - export ac / betting / summary
+🧪 Flex Test  [BACKOFFICE, MASTER เท่านั้น]
+fa1 fb1 fc1 fd1 fe1 ff1
+  → ทดสอบ: ประวัติแทง / tx / ปิดราคา / ปิดรอบ / ac / สรุป
 
-⚠️ ระบบ [หลังบ้าน]
-rs - รีเซ็ตระบบ (ยืนยันด้วย rscf)`;
+⚠️ ระบบ  [BACKOFFICE]
+rs — แจ้งเตือนก่อนรีเซ็ต  →  rscf — ยืนยันรีเซ็ต`;
 
     return ReplyBuilder.create()
         .text(helpText)

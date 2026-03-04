@@ -82,11 +82,10 @@ function doCloseOdds(
             );
         }
         emptyNotifyBody.push('(ไม่มีเดิมพันในราคานี้)');
-        return ReplyBuilder.create()
-            .flex(stopBubble, `${headerLine} หยุดเดิมพัน`)
-            .text(`${headerLine}\n(ไม่มีเดิมพันในราคานี้)`)
-            .notify(`${notifyTopic} #o${n} รอบ #r${roundId}`, emptyNotifyBody.join('\n'), notifyLevel)
-            .build();
+        const emptyFlexes = generateCloseOddsFlex(roundId, n, oddsToText(closedOdds), false, [], SystemState.users);
+        const rb = ReplyBuilder.create().flex(stopBubble, `${headerLine} หยุดเดิมพัน`);
+        for (const msg of emptyFlexes) rb.flex(msg.contents, msg.altText ?? headerLine);
+        return rb.notify(`${notifyTopic} #o${n} รอบ #r${roundId}`, emptyNotifyBody.join('\n'), notifyLevel).build();
     }
 
     // per-user bets สำหรับราคานี้
@@ -144,10 +143,10 @@ export function autoCloseForXCap(trigger?: XCapTriggerInfo): CommandResult | nul
 
 export function openOdds(text: string): CommandResult {
     if (SystemState.currentOdds?.status === 'OPEN')
-        throw new Error("⛔ ราคาปัจจุบันยังเปิดอยู่ครับ ต้องปิดก่อนเปิดใหม่ (พิมพ์ 'ป')");
+        throw new Error("ต้องปิดราคาก่อน (พิมพ์ 'ป')");
 
     const round = SystemState.currentRound;
-    if (!round || round.status !== 'OPEN') throw new Error('เปิดราคาได้เฉพาะตอนรอบ OPEN เท่านั้น');
+    if (!round || round.status !== 'OPEN') throw new Error("ต้องเปิดรอบก่อน (พิมพ์ 'O')");
 
     const parsed = parseOddsCommand(text);
     const { side, isSingleSide, isEqualOdds, underdogWin, favLoss, favWin, maxBet, userLimit, minBet, vig } = parsed;
@@ -244,8 +243,13 @@ export function openOdds(text: string): CommandResult {
     const notifyOddsText = newOdds.fixedOddsKey
         ? newOdds.fixedOddsKey
         : `ด[${dSide(newOdds.redLossRatio, newOdds.redWinRatio)}] ง[${dSide(newOdds.blueLossRatio, newOdds.blueWinRatio)}]`;
-    return ReplyBuilder.create()
-        .mentionEveryone(`{everyone} ราคา ${oddsText} เปิดแล้ว!`, true)
+    const rb = ReplyBuilder.create();
+    if (SystemState.mentionAll) {
+        rb.mentionEveryone(`{everyone} ราคา ${oddsText} เปิดแล้ว!`, true);
+    } else {
+        rb.text(`ทุกคน ราคา ${oddsText} เปิดแล้ว!`);
+    }
+    return rb
         .flex(flexContent, replyText)
         .notify(
             `เปิดราคา #o${n} รอบ #r${round.id}`,
@@ -330,14 +334,14 @@ export function cmdCancelOdds(text: string): CommandResult {
         for (let i = round.oddsHistory.length - 1; i >= 0; i--) {
             if (round.oddsHistory[i]!.status === 'CLOSED') { oddsIdx = i; break; }
         }
-        if (oddsIdx === -1) throw new Error('ไม่มีราคาที่ CLOSED ให้ยก');
+        if (oddsIdx === -1) throw new Error('ไม่มีข้อมูลราคา');
     } else {
         oddsIdx = requestedN;
         if (oddsIdx < 0 || oddsIdx >= round.oddsHistory.length)
             throw new Error(`ไม่พบราคา #o${requestedN + 1}`);
         const targetStatus = round.oddsHistory[oddsIdx]!.status;
-        if (targetStatus === 'OPEN') throw new Error(`ราคา #o${oddsIdx + 1} ยังเปิดอยู่ ปิดก่อนแล้วค่อยยก`);
-        if (targetStatus === 'CANCELLED') throw new Error(`ราคา #o${oddsIdx + 1} ถูกยกไปแล้ว`);
+        if (targetStatus === 'OPEN') throw new Error("ต้องปิดราคาก่อน (พิมพ์ 'ป')");
+        if (targetStatus === 'CANCELLED') throw new Error(`ราคา #o${oddsIdx + 1} ถูกยกไปแล้ว คืนค่าการยกเลิก (พิมพ์ 'ยกยก')`);
     }
 
     round.oddsHistory[oddsIdx]!.status = 'CANCELLED';
@@ -437,14 +441,14 @@ export function cmdUncancelOdds(text: string): CommandResult {
         for (let i = round.oddsHistory.length - 1; i >= 0; i--) {
             if (round.oddsHistory[i]!.status === 'CANCELLED') { oddsIdx = i; break; }
         }
-        if (oddsIdx === -1) throw new Error('ไม่มีราคาที่ถูกยกเลิกให้ restore');
+        if (oddsIdx === -1) throw new Error('ไม่มีข้อมูลราคา');
     } else {
         oddsIdx = requestedN;
         if (oddsIdx < 0 || oddsIdx >= round.oddsHistory.length)
             throw new Error(`ไม่พบราคา #o${requestedN + 1}`);
         const targetStatus = round.oddsHistory[oddsIdx]!.status;
         if (targetStatus !== 'CANCELLED')
-            throw new Error(`ราคา #o${oddsIdx + 1} ไม่ได้ถูกยกเลิก (สถานะ: ${targetStatus})`);
+            throw new Error(`ราคา #o${oddsIdx + 1} ไม่ได้ถูกยกเลิก`);
     }
 
     round.oddsHistory[oddsIdx]!.status = 'CLOSED';

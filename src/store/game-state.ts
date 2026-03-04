@@ -38,6 +38,7 @@ interface SystemStateType {
     roundCompact: boolean;
     acCompact: boolean;
     sumCompact: boolean;
+    mentionAll: boolean;
     xcap: number;           // ยอดเสียสูงสุดที่รับได้ต่อราคา (0 = ไม่จำกัด)
     defMaxBet: number;      // default สูงสุดต่อไม้
     defMinBet: number;      // default ขั้นต่ำต่อไม้
@@ -68,6 +69,7 @@ export const SystemState: SystemStateType = {
     roundCompact: false,
     acCompact: false,
     sumCompact: false,
+    mentionAll: true,
     xcap: 0,
     defMaxBet: 20000,
     defMinBet: 20,

@@ -5,6 +5,7 @@ export interface CompactState {
     rfc: boolean;
     acfc: boolean;
     sumfc: boolean;
+    mentionAll: boolean;
 }
 
 function row(label: string, cmd: string, isOn: boolean) {
@@ -56,6 +57,7 @@ export function generateCompactFlex(state: CompactState): unknown {
         { label: 'ผลรอบ',      cmd: 'rfc',   on: state.rfc },
         { label: 'ยอด Active', cmd: 'acfc',  on: state.acfc },
         { label: 'สรุปแพ้ชนะ', cmd: 'sumfc', on: state.sumfc },
+        { label: 'Tag @all',   cmd: 'all',   on: state.mentionAll },
     ];
 
     return {

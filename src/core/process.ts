@@ -63,6 +63,7 @@ export function processEvent(event: NormalizedEvent): ProcessResult | null {
             autoAdmin: false,
             telegramUsername: event.telegramUsername,
         });
+        sender.wasJustCreated = false; // prevent welcome flex on the very next command
         return { result: claimFoundingMaster(sender.userId), procMs: Date.now() - t0 };
     }
 

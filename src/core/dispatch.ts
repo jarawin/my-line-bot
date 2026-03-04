@@ -7,7 +7,7 @@ import { manageCredit, setRole, cmdUserInfo } from '../commands/user';
 import { cmdUserList, cmdBettingBoard, cmdListAdmins, cmdHelp, cmdHowToPlay } from '../commands/info';
 import { cmdStats, cmdTx, cmdExportTx, cmdActiveCredit, cmdExportAc, cmdExportBetting, cmdBettingSummary, cmdExportSum, cmdFlexTestBetHistory, cmdFlexTestTx, cmdFlexTestCloseOdds, cmdFlexTestCloseRound, cmdFlexTestActiveCredit, cmdFlexTestBettingSummary } from '../commands/stats';
 import { cmdBankBetting, cmdBankCarousel, cmdBankHelp, cmdAddBank, cmdShowBank, cmdManageBank, cmdSetAdminLink } from '../commands/account';
-import { cmdSetOddsCompact, cmdSetBetCompact, cmdSetTxCompact, cmdSetRoundCompact, cmdSetAcCompact, cmdSetSumCompact, cmdSetXCap, cmdSetDefMaxBet, cmdSetDefMinBet, cmdSetDefLim, cmdSetDefVig, cmdGetXCap, cmdGetDefMaxBet, cmdGetDefMinBet, cmdGetDefLim, cmdGetDefVig, cmdCompactPanel, cmdSettingsPanel, cmdGetRisk, cmdSetRisk, cmdGetDelay, cmdSetDelay } from '../commands/setup';
+import { cmdSetOddsCompact, cmdSetBetCompact, cmdSetTxCompact, cmdSetRoundCompact, cmdSetAcCompact, cmdSetSumCompact, cmdSetXCap, cmdSetDefMaxBet, cmdSetDefMinBet, cmdSetDefLim, cmdSetDefVig, cmdGetXCap, cmdGetDefMaxBet, cmdGetDefMinBet, cmdGetDefLim, cmdGetDefVig, cmdCompactPanel, cmdSettingsPanel, cmdGetRisk, cmdSetRisk, cmdGetDelay, cmdSetDelay, cmdGetMentionAll, cmdSetMentionAll } from '../commands/setup';
 import { ReplyBuilder } from '../utils/response';
 import { generateCreditFlex } from '../flex/credit-flex';
 import { fetchAndSaveLineProfile } from '../platform/line-profile';
@@ -305,6 +305,8 @@ const commands: CommandDef[] = [
     { pattern: /^rfc=([01])$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: ctx => cmdSetRoundCompact(ctx.match[1] === '1') },
     { pattern: /^acfc=([01])$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: ctx => cmdSetAcCompact(ctx.match[1] === '1') },
     { pattern: /^sumfc=([01])$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: ctx => cmdSetSumCompact(ctx.match[1] === '1') },
+    { pattern: /^all$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: () => cmdGetMentionAll() },
+    { pattern: /^all=([01])$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: ctx => cmdSetMentionAll(ctx.match[1] === '1') },
     { pattern: /^xcap$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: () => cmdGetXCap() },
     { pattern: /^maxbet$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: () => cmdGetDefMaxBet() },
     { pattern: /^minbet$/i, allowedRoles: PRIVILEGED, allowedGroups: ["BACKOFFICE"], handler: () => cmdGetDefMinBet() },

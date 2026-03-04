@@ -41,8 +41,18 @@ export function manageCredit(text: string): CommandResult {
     } else if (op === '-') {
         SystemState.stats.globalWithdraw += Math.abs(diff);
     }
+
+    const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+    const nameStr = user.displayName ?? user.telegramUsername ?? '';
+    const nameTag = nameStr ? ` ${nameStr}` : '';
+    const notifyTopic = op === '+' ? '💰 ฝาก' : op === '-' ? '💸 ถอน' : '⚙️ ปรับยอด';
+    const notifyMsg = op === '='
+        ? `#u${shortId}${nameTag}  ${fmt(oldCredit)} → ${fmt(user.credit)}`
+        : `#u${shortId}${nameTag}  ${diff > 0 ? '+' : ''}${fmt(diff)}  (คงเหลือ ${fmt(user.credit)})`;
+
     return ReplyBuilder.create()
         .text(`✅ #u${shortId} เครดิต: ${oldCredit} → ${user.credit}`)
+        .notify(notifyTopic, notifyMsg, 'INFO')
         .build();
 }
 

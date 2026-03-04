@@ -1,9 +1,11 @@
-import { processEvent, tryWelcomeUser } from '../core/process';
+import { processEvent } from '../core/process';
 import { printLog, nextWebhookId } from '../utils/logger';
 import { notifyAllTelegramGroups } from './telegram';
 import { getOrCreateUser, SystemState } from '../store/game-state';
 import { saveUser, saveBankAccount } from '../store/persistence';
 import { IMAGE_DIR } from '../config/paths';
+import { generateCreditFlex } from '../flex/credit-flex';
+import { ReplyBuilder } from '../utils/response';
 import type { CommandResult, LineMessage, LineReplyContext, Mention, MentionData, NormalizedEvent } from '../types';
 
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
@@ -226,15 +228,21 @@ async function handleMemberJoined(event: any): Promise<void> {
     for (const member of members) {
         if (member.type !== 'user') continue;
         const user = getOrCreateUser(member.userId, { platform: 'LINE' });
+        const isNew = user.wasJustCreated;
+        if (isNew) user.wasJustCreated = false;
         if (!user.isInGroup) {
             user.isInGroup = true;
             saveUser(user);
         }
         if (!replyToken) continue;
-        const welcome = tryWelcomeUser(user, groupId);
-        if (!welcome) continue;
+        const greeting = isNew
+            ? 'ยินดีต้อนรับ {u0} 🎉'
+            : 'ยินดีต้อนรับกลับมาอีกครั้ง {u0}';
+        const flexes = generateCreditFlex({ user, transactions: [], currentRound: null, settledRound: null, showWelcome: true });
+        const rb = ReplyBuilder.create().textV2UserMention(user.userId, greeting);
+        for (const f of flexes) rb.flex(f.contents, f.altText ?? `#u${user.shortId} 💰 ${user.credit}`);
         try {
-            await sendLineReply({ type: 'LINE', replyToken } as LineReplyContext, welcome);
+            await sendLineReply({ type: 'LINE', replyToken } as LineReplyContext, rb.build());
         } catch (err) {
             console.error('[LINE][ERROR] memberJoined reply failed:', err);
         }

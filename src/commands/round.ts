@@ -20,33 +20,16 @@ import { oddsToText } from '../utils/odds-format';
 const fmtN   = (v: number) => Math.round(v).toLocaleString('en-US');
 const fmtSgn = (v: number) => (v >= 0 ? '+' : '') + Math.round(v).toLocaleString('en-US');
 
-// รวม 2 CommandResult เข้าด้วยกัน (ใช้ตอน auto-closeOdds + closeRound ใน reply เดียว)
-function mergeCommandResults(a: CommandResult, b: CommandResult): CommandResult {
-    const aLen = a.messages.length;
-    return {
-        messages: [...a.messages, ...b.messages],
-        lineMessages: (a.lineMessages || b.lineMessages)
-            ? [...(a.lineMessages ?? []), ...(b.lineMessages ?? [])]
-            : undefined,
-        lineMessageIndices: (a.lineMessageIndices || b.lineMessageIndices)
-            ? [
-                ...(a.lineMessageIndices ?? []),
-                ...(b.lineMessageIndices ?? []).map(i => i + aLen),
-            ]
-            : undefined,
-        notifications: [...(a.notifications ?? []), ...(b.notifications ?? [])],
-        mentions: a.mentions,
-        mentionAtIndex: a.mentionAtIndex,
-        quoteIndices: a.quoteIndices,
-    };
-}
 
 const REVERSE_RE = /^[rR](\d+)?$/;
 
 export function openRound(): CommandResult {
     clearViewingRound();
     const cur = SystemState.currentRound;
-    if (cur && cur.status !== 'COMPLETED') throw new Error(`ต้องเคลียร์รอบเก่าก่อน (สถานะ: ${cur.status})`);
+    if (cur && cur.status !== 'COMPLETED') {
+        const label = cur.status === 'OPEN' ? 'กำลังเปิด' : cur.status === 'CLOSED' ? 'ปิดรอบแล้ว' : 'รอจ่ายเงิน';
+        throw new Error(`ต้องเคลียร์รอบเก่าก่อน (สถานะ: ${label})`);
+    }
 
     const newId = (cur?.id ?? getMaxRoundId()) + 1;
     resetAllUsersRoundData();
@@ -56,18 +39,25 @@ export function openRound(): CommandResult {
     recalcRoundAgg(); // reset aggregate cache สำหรับรอบใหม่
     saveRound(newRound);
 
-    return ReplyBuilder.create()
-        .textQuoted(`✅ เปิดรอบ #r${newId} แล้ว!`)
-        .mentionEveryone(`{everyone} เตรียมเดิมพันได้เลย!`)
-        .notify('เปิดรอบ', `#r${newId} เปิดแล้ว`, 'INFO')
-        .build();
+    const rb = ReplyBuilder.create().textQuoted(`✅ เปิดรอบ #r${newId} แล้ว!`);
+    if (SystemState.mentionAll) {
+        rb.mentionEveryone(`{everyone} เตรียมเดิมพันได้เลย!`);
+    } else {
+        rb.text(`ทุกคนเตรียมเดิมพันได้เลย!`);
+    }
+    return rb.notify('เปิดรอบ', `#r${newId} เปิดแล้ว`, 'INFO').build();
 }
 
 export function closeRound(): CommandResult {
     const round = SystemState.currentRound;
-    if (!round || round.status !== 'OPEN') throw new Error('ไม่มีรอบที่ OPEN อยู่');
+    if (!round || round.status !== 'OPEN') throw new Error('ไม่มีรอบที่เปิดอยู่');
 
-    const oddsResult = SystemState.currentOdds ? closeOdds() : null;
+    // ถ้าราคายังเปิดอยู่ — ปิดราคาอย่างเดียวก่อน แล้วให้แอดมินกด X อีกรอบ
+    if (SystemState.currentOdds) {
+        const oddsResult = closeOdds();
+        oddsResult.messages.push('ปิดราคาล่าสุดแล้ว กด X อีกรอบเพื่อปิดรอบ');
+        return oddsResult;
+    }
 
     round.status = 'CLOSED';
     saveRound(round);
@@ -93,30 +83,28 @@ export function closeRound(): CommandResult {
     const builder = ReplyBuilder.create()
         .flex(closeRoundBubble, `⛔ ปิดรอบ #r${round.id} แล้ว รอประกาศผล`);
 
-    if (activeBets.length > 0) {
-        const { flexes, userNets, userOrder } = generateCloseRoundFlex(round.id, activeBets, SystemState.users, false, undefined, false, true);
-        const userLines: string[] = [`สรุปผลแพ้ชนะ (คาดการณ์) ปิดรอบที่ ${round.id}`, ''];
-        for (const userId of userOrder) {
-            const user = SystemState.users.get(userId);
-            const { redNet, blueNet } = userNets.get(userId)!;
-            userLines.push(`#u${user?.shortId ?? userId} ด${fmtSgn(redNet)} ง${fmtSgn(blueNet)}`);
-        }
-        for (const [i, f] of flexes.entries()) builder.flex(f.contents, i === 0 ? userLines.join('\n') : (f.altText ?? ''));
+    const { flexes, userNets, userOrder } = generateCloseRoundFlex(round.id, activeBets, SystemState.users, false, undefined, false, true);
+    const userLines: string[] = [`สรุปผลแพ้ชนะ (คาดการณ์) ปิดรอบที่ ${round.id}`, ''];
+    for (const userId of userOrder) {
+        const user = SystemState.users.get(userId);
+        const { redNet, blueNet } = userNets.get(userId)!;
+        userLines.push(`#u${user?.shortId ?? userId} ด${fmtSgn(redNet)} ง${fmtSgn(blueNet)}`);
     }
+    for (const [i, f] of flexes.entries()) builder.flex(f.contents, i === 0 ? userLines.join('\n') : (f.altText ?? ''));
 
     const roundResult = builder
         .notify(`ปิดรอบ #r${round.id}`, [...oddsLines, ...buildRoundSummaryLines()].join('\n'), 'INFO')
         .build();
 
-    return oddsResult ? mergeCommandResults(oddsResult, roundResult) : roundResult;
+    return roundResult;
 }
 
 export function reopenRound(): CommandResult {
     clearViewingRound();
     const round = SystemState.currentRound;
-    if (!round) throw new Error('❌ ไม่มีรอบที่เปิดอยู่');
-    if (round.status === 'OPEN') throw new Error('❌ รอบกำลังเปิดอยู่แล้ว');
-    if (round.status === 'COMPLETED') throw new Error('❌ ไม่สามารถเปิดรอบที่จบแล้วได้ (ใช้ reverse แทน)');
+    if (!round) throw new Error('ไม่มีรอบที่เปิดอยู่');
+    if (round.status === 'OPEN') throw new Error('รอบกำลังเปิดอยู่แล้ว');
+    if (round.status === 'COMPLETED') throw new Error("รอบนี้เคลียร์แล้ว ต้องย้อนกลับผลลัพธ์ (พิมพ์ 'R')");
 
     round.status = 'OPEN';
     saveRound(round);
@@ -131,8 +119,8 @@ export function setResult(winner: RoundResult): CommandResult {
     clearViewingRound();
     const round = SystemState.currentRound;
     if (!round) throw new Error('ไม่มีรอบที่เปิดอยู่');
-    if (round.status === 'OPEN') throw new Error('ต้องปิดรอบก่อน (พิมพ์ X)');
-    if (round.status === 'COMPLETED') throw new Error('รอบนี้เคลียร์แล้ว ไม่สามารถเปลี่ยนผลได้');
+    if (round.status === 'OPEN') throw new Error("ต้องปิดรอบก่อน (พิมพ์ 'X')");
+    if (round.status === 'COMPLETED') throw new Error("รอบนี้เคลียร์แล้ว ต้องย้อนกลับผลลัพธ์ (พิมพ์ 'R')");
 
     const previousResult = round.result;
     const isChangingResult = previousResult !== undefined;
@@ -192,7 +180,7 @@ export function confirmSettlement(): CommandResult {
     clearViewingRound();
 
     const round = SystemState.currentRound;
-    if (!round || !round.result) throw new Error('❌ ยังไม่มีผลการแข่งขัน');
+    if (!round || !round.result) throw new Error("ยังไม่มีผลการแข่งขัน (พิมพ์ 'Sด Sส Sง')");
     const winner = round.result;
     const activeBets = round.bets.filter(b => b.status !== 'VOID');
 
@@ -433,18 +421,15 @@ export function cmdViewRoundFlex(roundId?: number, groupType?: GroupType): Comma
 export function cmdReverseRound(text: string): CommandResult {
     const cur = SystemState.currentRound;
     if (cur && cur.status !== 'COMPLETED') {
-        throw new Error(
-            `มีรอบ #r${cur.id} ที่ยังไม่เสร็จ (สถานะ: ${cur.status})\n` +
-            `ต้องเคลียร์รอบปัจจุบันให้เป็น COMPLETED ก่อนย้อนกลับรอบเก่า`
-        );
+        throw new Error(`รอบ #r${cur.id} ที่ยังไม่เคลียร์ ต้องเคลียร์ก่อน (พิมพ์ 'Y')`);
     }
 
     const m = text.match(REVERSE_RE)!;
     const roundId = m[1] ? parseInt(m[1], 10) : undefined;
 
     const roundRow = getRoundForReversal(roundId);
-    if (!roundRow) throw new Error(roundId ? `ไม่พบรอบ #r${roundId}` : 'ไม่มีรอบที่สามารถย้อนกลับได้');
-    if (roundRow.status !== 'COMPLETED') throw new Error(`รอบ #r${roundRow.id} ไม่ได้อยู่ในสถานะ COMPLETED (สถานะ: ${roundRow.status})`);
+    if (!roundRow) throw new Error(roundId ? `ไม่พบรอบ #r${roundId}` : 'ไม่มีข้อมูลรอบ');
+    if (roundRow.status !== 'COMPLETED') throw new Error(`รอบ #r${roundRow.id} ที่ยังไม่เคลียร์ ต้องเคลียร์ก่อน (พิมพ์ 'Y')`);
 
     const settledBets = getSettledBetsForRound(roundRow.id);
     const roundRef = `#r${roundRow.id}`;
@@ -478,7 +463,7 @@ export function cmdReverseRound(text: string): CommandResult {
         amount: b.amount,
         winAmount: b.win_amount,
         lossAmount: b.loss_amount,
-        timestamp: 0,
+        timestamp: b.created_at,
         status: 'PENDING' as const,
     }));
 

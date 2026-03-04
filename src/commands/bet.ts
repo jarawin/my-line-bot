@@ -78,6 +78,17 @@ async function sendDelayedResult(pending: PendingBet, result: CommandResult, app
     }
 }
 
+function calcMaxBet(user: UserState, side: 'RED' | 'BLUE', odds: import('../types').BettingOdds, failedAmount: number): number {
+    let lo = 0, hi = failedAmount - 1;
+    while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        let ok = false;
+        try { calculateBetImpact(user, side, mid, odds); ok = true; } catch { ok = false; }
+        if (ok) lo = mid; else hi = mid - 1;
+    }
+    try { calculateBetImpact(user, side, lo, odds); return lo; } catch { return 0; }
+}
+
 let _betSeq = 0;
 function nextBetId(): string { return String(++_betSeq); }
 
@@ -88,14 +99,14 @@ export function placeBet(
     replyContext?: ReplyContext,
 ): CommandResult {
     const odds = SystemState.currentOdds;
-    if (!odds) throw new Error('ยังไม่มีราคา');
-    if (odds.status !== 'OPEN') throw new Error('ปิดรับแทงแล้ว');
+    if (!odds) throw new Error('ไม่ติด แอดมินยังไม่เปิดราคา');
+    if (odds.status !== 'OPEN') throw new Error('ไม่ติด แอดมินปิดราคาแล้ว');
 
-    if (side === 'RED' && odds.redLossRatio === 0) throw new Error('❌ ฝั่งแดงปิดรับเดิมพันในราคานี้');
-    if (side === 'BLUE' && odds.blueLossRatio === 0) throw new Error('❌ ฝั่งน้ำเงินปิดรับเดิมพันในราคานี้');
+    if (side === 'RED' && odds.redLossRatio === 0) throw new Error('ไม่ติด ราคานี้เปิดรับเฉพาะเดิมพันฝั่งน้ำเงิน');
+    if (side === 'BLUE' && odds.blueLossRatio === 0) throw new Error('ไม่ติด ราคานี้เปิดรับเฉพาะเดิมพันฝั่งแดง');
 
     const round = SystemState.currentRound;
-    if (!round || round.status !== 'OPEN') throw new Error('ไม่มีรอบที่เปิดอยู่');
+    if (!round || round.status !== 'OPEN') throw new Error('ไม่ติด แอดมินยังไม่เปิดราคา');
 
     const user = getOrCreateUser(userId);
     const oddsIndex = round.oddsHistory.length - 1;
@@ -103,10 +114,10 @@ export function placeBet(
 
     const currentCount = user.oddsBetCounts.get(oddsKey) ?? 0;
     if (odds.userLimit > 0 && currentCount >= odds.userLimit)
-        throw new Error(`ครบโควต้า ${odds.userLimit} ไม้แล้วครับ`);
+        throw new Error(`ไม่ติด เดิมพันเต็ม ${odds.userLimit} ไม้แล้ว`);
 
     if (requestedAmount < odds.minBet)
-        throw new Error(`ขั้นต่ำ ${odds.minBet} ครับ`);
+        throw new Error(`ไม่ติด กรุณาเดิมพันขั้นต่ำ ${odds.minBet} บาท`);
 
     let amount = requestedAmount;
     let warning: string | undefined;
@@ -115,7 +126,18 @@ export function placeBet(
         warning = `⚠️ ปรับยอดเป็นสูงสุด ${odds.maxBet}`;
     }
 
-    const impact = calculateBetImpact(user, side, amount, odds);
+    let impact: import('../types').BetImpact;
+    try {
+        impact = calculateBetImpact(user, side, amount, odds);
+    } catch (e: any) {
+        if (e.message === 'เครดิตไม่พอ') {
+            const maxAmount = calcMaxBet(user, side, odds, amount);
+            const sideName = side === 'RED' ? 'แดง' : 'น้ำเงิน';
+            const extra = maxAmount > 0 ? `\nเดิมพัน${sideName}ได้อีก ${maxAmount.toLocaleString('en-US')} บาท` : '';
+            throw new Error(`ไม่ติด เครดิตไม่พอ${extra}`);
+        }
+        throw e;
+    }
 
     const prevRedNet = user.currentRoundRedNet;
     const prevBlueNet = user.currentRoundBlueNet;
@@ -150,7 +172,7 @@ export function placeBet(
         user.oddsBetCounts.set(oddsKey, prevOddsCount);
         const trigger: XCapTriggerInfo = { userId, side, amount, projectedWorstCase: xcapBreach, xcap: SystemState.xcap };
         const closeResult = autoCloseForXCap(trigger) ?? ReplyBuilder.create().text('⚡ ปิดรับแทงอัตโนมัติแล้ว').build();
-        closeResult.messages.push('❌ ยกเลิกการแทง ราคาปิดแล้ว');
+        closeResult.messages.push('❌ ไม่ติด แอดมินปิดราคาแล้ว');
         return closeResult;
     }
 
@@ -258,7 +280,7 @@ async function finalizePendingBet(betId: string): Promise<void> {
     if (shouldVoid) {
         const user = SystemState.users.get(pending.userId);
         if (user) recalculateUserStateFromBets(user, pending.userId);
-        await sendDelayedReply(pending, '❌ ราคาปิดแล้ว บิลถูก Void');
+        await sendDelayedReply(pending, '❌ ไม่ติด แอดมินปิดราคาแล้ว');
         return;
     }
 
@@ -273,7 +295,7 @@ async function finalizePendingBet(betId: string): Promise<void> {
             projectedWorstCase: xcapBreach, xcap: SystemState.xcap,
         };
         const closeResult = autoCloseForXCap(trigger) ?? ReplyBuilder.create().text('⚡ ปิดรับแทงอัตโนมัติแล้ว').build();
-        await sendDelayedResult(pending, closeResult, '❌ ยกเลิกการแทง ราคาปิดแล้ว');
+        await sendDelayedResult(pending, closeResult, '❌ ไม่ติด แอดมินปิดราคาแล้ว');
         if (closeResult.notifications.length > 0) {
             const { notifyAllTelegramGroups } = await import('../platform/telegram');
             void notifyAllTelegramGroups(closeResult.notifications);

@@ -177,6 +177,18 @@ export function cmdSetDelay(value: number): CommandResult {
     return ReplyBuilder.create().text(`✅ Bet delay: ${value.toLocaleString('en-US')} ms`).build();
 }
 
+export function cmdGetMentionAll(): CommandResult {
+    const status = SystemState.mentionAll ? '🔔 เปิด (Tag @everyone ทุกคน)' : '🔕 ปิด (ไม่ Tag @everyone)';
+    return ReplyBuilder.create().text(`mention all: ${status}`).build();
+}
+
+export function cmdSetMentionAll(enable: boolean): CommandResult {
+    SystemState.mentionAll = enable;
+    saveSystemConfig('mention_all', enable ? '1' : '0');
+    const label = enable ? '✅ เปิด Tag @everyone แล้ว' : '✅ ปิด Tag @everyone แล้ว';
+    return ReplyBuilder.create().text(label).build();
+}
+
 export function cmdSetAcCompact(enable: boolean): CommandResult {
     SystemState.acCompact = enable;
     saveSystemConfig('ac_compact', enable ? '1' : '0');
@@ -188,12 +200,13 @@ export function cmdSetAcCompact(enable: boolean): CommandResult {
 
 export function cmdCompactPanel(): CommandResult {
     const bubble = generateCompactFlex({
-        ofc:   SystemState.oddsCompact,
-        bfc:   SystemState.betCompact,
-        tfc:   SystemState.txCompact,
-        rfc:   SystemState.roundCompact,
-        acfc:  SystemState.acCompact,
-        sumfc: SystemState.sumCompact,
+        ofc:        SystemState.oddsCompact,
+        bfc:        SystemState.betCompact,
+        tfc:        SystemState.txCompact,
+        rfc:        SystemState.roundCompact,
+        acfc:       SystemState.acCompact,
+        sumfc:      SystemState.sumCompact,
+        mentionAll: SystemState.mentionAll,
     });
     return ReplyBuilder.create().flex(bubble, '⚙️ Compact Mode').build();
 }
